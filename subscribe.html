@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+</head>
+<body>
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyCcy-LscSkLtF0A9cZfAw3RkhuMvwdR9z0",
+  authDomain: "blogger-push-2600c.firebaseapp.com",
+  projectId: "blogger-push-2600c",
+  messagingSenderId: "123215748336",
+  appId: "1:123215748336:web:b514311091defcdbfff635" };
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
+
+    window.addEventListener("message", (event) => {
+        if (event.data === "request-token") {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+            .then((registration) => {
+                return messaging.getToken({ 
+                    serviceWorkerRegistration: registration,
+                    vapidKey: "BLdoMX40XO497PVtd7M2uv7Mii895Nl-QIynXiJWR3lf1GScoqOjY4neYyUBGhU9X9-WDLMCrCCICJr6ozVZWr0" // පියවර 1 හි VAPID Key එක
+                });
+            })
+            .then((currentToken) => {
+                if (currentToken) {
+                    window.parent.postMessage({ type: "FCM_TOKEN", token: currentToken }, "*");
+                }
+            })
+            .catch((err) => console.error('Error:', err));
+        }
+    });
+</script>
+</body>
+</html>
