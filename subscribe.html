@@ -23,37 +23,43 @@
     const messaging = firebase.messaging();
     const db = firebase.firestore();
 
-    // Auto-execution function
-    function initPush() {
+    async function initPush() {
         if (Notification.permission === 'granted') {
-            navigator.serviceWorker.register('/firebase-messaging-sw.js')
-            .then((registration) => {
-                console.log("Service Worker Registered Successfully!");
-                return messaging.getToken({ 
+            try {
+                // 1. Service Worker එක Register කිරීම
+                await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                
+                // 🟢 2. Service Worker එක ACTIVE වන තෙක් රැඳී සිටීම (AbortError විසඳුම)
+                const registration = await navigator.serviceWorker.ready;
+                console.log("Service Worker Active Status: Ready!");
+
+                // 3. FCM Token එක ලබා ගැනීම
+                const currentToken = await messaging.getToken({ 
                     serviceWorkerRegistration: registration,
                     vapidKey: "BLdoMX40XO497PVtd7M2uv7Mii895Nl-QIynXiJWR3lf1GScoqOjY4neYyUBGhU9X9-WDLMCrCCICJr6ozVZWr0"
                 });
-            })
-            .then((currentToken) => {
+
                 if (currentToken) {
                     console.log("Token Received: ", currentToken);
-                    // Firestore එකට Save කිරීම
-                    return db.collection("fcm_tokens").doc(currentToken).set({
+                    
+                    // 4. Firestore එකට Save කිරීම
+                    await db.collection("fcm_tokens").doc(currentToken).set({
                         token: currentToken,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
+
+                    console.log("🎉 Token successfully saved to Firestore!");
+                    window.parent.postMessage({ type: "FCM_TOKEN", token: currentToken }, "*");
                 }
-            })
-            .then(() => {
-                console.log("🎉 Token successfully saved to Firestore!");
-            })
-            .catch((err) => console.error('Push Error:', err));
+            } catch (err) {
+                console.error('Push Error:', err);
+            }
         } else {
             console.warn("Notification permission not granted yet.");
         }
     }
 
-    // Page එක load වූ සැනින් හෝ message එකක් ආ විට run කරන්න
+    // Load වූ පසු ක්‍රියාත්මක කිරීම
     window.addEventListener("load", initPush);
     window.addEventListener("message", (event) => {
         if (event.data === "request-token") {
