@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <!-- Firebase Apps & Services -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
@@ -17,23 +19,43 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
     const db = firebase.firestore();
 
-    // Main Domain එකෙන් SAVE_TOKEN Message එක ලැබුණු විට Firestore එකට Save කිරීම
-    window.addEventListener("message", async (event) => {
-        if (event.origin !== "https://blog.ashnimiq.com") return;
+    async function processPushToken() {
+        try {
+            // 1. Subdomain එකේම Service Worker එක Register කිරීම
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            await navigator.serviceWorker.ready;
 
-        if (event.data && event.data.type === "SAVE_TOKEN") {
-            const token = event.data.token;
-            try {
-                await db.collection("fcm_tokens").doc(token).set({
-                    token: token,
+            // 2. FCM Token එක ලබා ගැනීම
+            const currentToken = await messaging.getToken({ 
+                serviceWorkerRegistration: registration,
+                vapidKey: "BLdoMX40XO497PVtd7M2uv7Mii895Nl-QIynXiJWR3lf1GScoqOjY4neYyUBGhU9X9-WDLMCrCCICJr6ozVZWr0"
+            });
+
+            if (currentToken) {
+                console.log("Token generated inside Subdomain:", currentToken);
+
+                // 3. Firestore Database එකට Save කිරීම
+                await db.collection("fcm_tokens").doc(currentToken).set({
+                    token: currentToken,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                console.log("🎉 Token successfully saved to Firestore via Subdomain Bridge!");
-            } catch (error) {
-                console.error("Error saving token to Firestore:", error);
+
+                console.log("🎉 Token successfully saved to Firestore!");
             }
+        } catch (err) {
+            console.error("Subdomain FCM Error:", err);
+        }
+    }
+
+    // Main Domain එකෙන් Signal එක ආ විට ක්‍රියාත්මක වීම
+    window.addEventListener("message", (event) => {
+        if (event.origin !== "https://blog.ashnimiq.com") return;
+
+        if (event.data === "GENERATE_TOKEN") {
+            processPushToken();
         }
     });
 </script>
