@@ -1,34 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <!-- Firebase Apps & Services -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <script>
-    const firebaseConfig = { apiKey: "AIzaSyCcy-LscSkLtF0A9cZfAw3RkhuMvwdR9z0",
+    const firebaseConfig = {
+       apiKey: "AIzaSyCcy-LscSkLtF0A9cZfAw3RkhuMvwdR9z0",
   authDomain: "blogger-push-2600c.firebaseapp.com",
   projectId: "blogger-push-2600c",
+  storageBucket: "blogger-push-2600c.firebasestorage.app",
   messagingSenderId: "123215748336",
-  appId: "1:123215748336:web:b514311091defcdbfff635" };
+  appId: "1:123215748336:web:b514311091defcdbfff635",
+  measurementId: "G-F7S0MMWCF3"
+    };
+
+    // Firebase Initialize කිරීම
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
+    const db = firebase.firestore(); // Firestore එක සම්බන්ධ කිරීම
 
     window.addEventListener("message", (event) => {
         if (event.data === "request-token") {
-            navigator.serviceWorker.register('/firebase-messaging-sw.js')
-            .then((registration) => {
-                return messaging.getToken({ 
-                    serviceWorkerRegistration: registration,
-                    vapidKey: "BLdoMX40XO497PVtd7M2uv7Mii895Nl-QIynXiJWR3lf1GScoqOjY4neYyUBGhU9X9-WDLMCrCCICJr6ozVZWr0" // පියවර 1 හි VAPID Key එක
-                });
-            })
-            .then((currentToken) => {
-                if (currentToken) {
-                    window.parent.postMessage({ type: "FCM_TOKEN", token: currentToken }, "*");
-                }
-            })
-            .catch((err) => console.error('Error:', err));
+            if (Notification.permission === 'granted') {
+                navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                .then((registration) => {
+                    return messaging.getToken({ 
+                        serviceWorkerRegistration: registration,
+                        vapidKey: "BLdoMX40XO497PVtd7M2uv7Mii895Nl-QIynXiJWR3lf1GScoqOjY4neYyUBGhU9X9-WDLMCrCCICJr6ozVZWr0" // ⚠️ ඔයාගේ VAPID Key එක
+                    });
+                })
+                .then((currentToken) => {
+                    if (currentToken) {
+                        // 🟢 Token එක Firestore Database එකේ Save කිරීම
+                        db.collection("fcm_tokens").doc(currentToken).set({
+                            token: currentToken,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        })
+                        .then(() => {
+                            console.log("Token successfully saved to Firestore!");
+                            window.parent.postMessage({ type: "FCM_TOKEN", token: currentToken }, "*");
+                        })
+                        .catch((error) => {
+                            console.error("Error saving token to Firestore: ", error);
+                        });
+                    }
+                })
+                .catch((err) => console.error('Token Error:', err));
+            }
         }
     });
 </script>
