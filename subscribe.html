@@ -23,35 +23,41 @@
     const messaging = firebase.messaging();
     const db = firebase.firestore();
 
+    // Auto-execution function
+    function initPush() {
+        if (Notification.permission === 'granted') {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+            .then((registration) => {
+                console.log("Service Worker Registered Successfully!");
+                return messaging.getToken({ 
+                    serviceWorkerRegistration: registration,
+                    vapidKey: "BLdoMX40XO497PVtd7M2uv7Mii895Nl-QIynXiJWR3lf1GScoqOjY4neYyUBGhU9X9-WDLMCrCCICJr6ozVZWr0"
+                });
+            })
+            .then((currentToken) => {
+                if (currentToken) {
+                    console.log("Token Received: ", currentToken);
+                    // Firestore එකට Save කිරීම
+                    return db.collection("fcm_tokens").doc(currentToken).set({
+                        token: currentToken,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+            })
+            .then(() => {
+                console.log("🎉 Token successfully saved to Firestore!");
+            })
+            .catch((err) => console.error('Push Error:', err));
+        } else {
+            console.warn("Notification permission not granted yet.");
+        }
+    }
+
+    // Page එක load වූ සැනින් හෝ message එකක් ආ විට run කරන්න
+    window.addEventListener("load", initPush);
     window.addEventListener("message", (event) => {
         if (event.data === "request-token") {
-            if (Notification.permission === 'granted') {
-                navigator.serviceWorker.register('/firebase-messaging-sw.js')
-                .then((registration) => {
-                    return messaging.getToken({ 
-                        serviceWorkerRegistration: registration,
-                        // 🟢 Corrected VAPID Key from Firebase Console
-                        vapidKey: "BLdoMX4OXO49TPVtd7M2uv7Mii895Nl-QIynXlJWR3lf1GScoq0JY4neYyUBGHJ9X9-WDLMCrCCICJr6czVZWr0"
-                    });
-                })
-                .then((currentToken) => {
-                    if (currentToken) {
-                        // 🟢 Token එක Firestore Database එකේ Save කිරීම
-                        db.collection("fcm_tokens").doc(currentToken).set({
-                            token: currentToken,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                        })
-                        .then(() => {
-                            console.log("Token successfully saved to Firestore!");
-                            window.parent.postMessage({ type: "FCM_TOKEN", token: currentToken }, "*");
-                        })
-                        .catch((error) => {
-                            console.error("Error saving token to Firestore: ", error);
-                        });
-                    }
-                })
-                .catch((err) => console.error('Token Error:', err));
-            }
+            initPush();
         }
     });
 </script>
