@@ -9,19 +9,19 @@
 <body>
 <script>
     const firebaseConfig = {
-       apiKey: "AIzaSyCcy-LscSkLtF0A9cZfAw3RkhuMvwdR9z0",
-  authDomain: "blogger-push-2600c.firebaseapp.com",
-  projectId: "blogger-push-2600c",
-  storageBucket: "blogger-push-2600c.firebasestorage.app",
-  messagingSenderId: "123215748336",
-  appId: "1:123215748336:web:b514311091defcdbfff635",
-  measurementId: "G-F7S0MMWCF3"
+        apiKey: "AIzaSyCcy-LscSkLtF0A9cZfAw3RkhuMvwdR9z0",
+        authDomain: "blogger-push-2600c.firebaseapp.com",
+        projectId: "blogger-push-2600c",
+        storageBucket: "blogger-push-2600c.firebasestorage.app",
+        messagingSenderId: "123215748336",
+        appId: "1:123215748336:web:b514311091defcdbfff635",
+        measurementId: "G-F7S0MMWCF3"
     };
 
     // Firebase Initialize කිරීම
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
-    const db = firebase.firestore(); // Firestore එක සම්බන්ධ කිරීම
+    const db = firebase.firestore();
 
     window.addEventListener("message", (event) => {
         if (event.data === "request-token") {
@@ -30,7 +30,8 @@
                 .then((registration) => {
                     return messaging.getToken({ 
                         serviceWorkerRegistration: registration,
-                        vapidKey: "BLdoMX40XO497PVtd7M2uv7Mii895Nl-QIynXiJWR3lf1GScoqOjY4neYyUBGhU9X9-WDLMCrCCICJr6ozVZWr0" // ⚠️ ඔයාගේ VAPID Key එක
+                        // 🟢 Corrected VAPID Key from Firebase Console
+                        vapidKey: "BLdoMX4OXO49TPVtd7M2uv7Mii895Nl-QIynXlJWR3lf1GScoq0JY4neYyUBGHJ9X9-WDLMCrCCICJr6czVZWr0"
                     });
                 })
                 .then((currentToken) => {
